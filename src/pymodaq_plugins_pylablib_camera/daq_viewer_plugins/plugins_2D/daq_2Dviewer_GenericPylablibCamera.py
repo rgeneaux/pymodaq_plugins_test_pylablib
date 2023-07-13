@@ -3,27 +3,19 @@ from easydict import EasyDict as edict
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, DataFromPlugins, Axis
 from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.daq_utils.parameter import Parameter
-
-import pylablib as pll
-pll.par["devices/dlls/dcamapi"] = "C:/Windows/System32"
-from pylablib.devices import DCAM
 from qtpy import QtWidgets, QtCore
 from time import perf_counter
 
-camera_number = DCAM.get_cameras_number()
-if camera_number == 0:
-    raise Exception('No DCAM camera was found.')
 
-
-class DAQ_2DViewer_Hamamatsu(DAQ_Viewer_base):
+class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     """
     """
     params = comon_parameters + [
-        {'title': 'Camera index:', 'name': 'camera_index', 'type': 'int', 'value': 0, 'min': 0, 'max': camera_number},
-        {'title': 'Camera model:', 'name': 'camera_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Camera:', 'name': 'camera_list', 'type': 'list', 'limits': []},
+        {'title': 'Camera model:', 'name': 'camera_info', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Update ROI', 'name': 'update_roi', 'type': 'bool_push', 'value': False},
         {'title': 'Clear ROI+Bin', 'name': 'clear_roi', 'type': 'bool_push', 'value': False},
-        {'title': 'Binning', 'name': 'binning', 'type': 'list', 'values': [1,2]},
+        {'title': 'Binning', 'name': 'binning', 'type': 'list', 'values': [1, 2]},
         {'title': 'Image width', 'name': 'hdet', 'type': 'int', 'value': 1, 'readonly': True},
         {'title': 'Image height', 'name': 'vdet', 'type': 'int', 'value': 1, 'readonly': True},
         {'title': 'Timing', 'name': 'timing_opts', 'type': 'group', 'children':
@@ -34,8 +26,20 @@ class DAQ_2DViewer_Hamamatsu(DAQ_Viewer_base):
     ]
     callback_signal = QtCore.Signal()
 
+    def list_cameras(self):
+        self.camera_list = None
+        raise NotImplementedError('.list_cameras() must be defined for this camera class.')
+
+    def init_controller(self):
+        raise NotImplementedError('.init_controller() must be defined for this camera class.')
+
+
     def ini_attributes(self):
-        self.controller: DCAM = None
+        self.list_cameras()
+        self.params.children('camera_list').setLimits(self.camera_list)
+        self.params.children('camera_list').setValue(self.camera_list[0])
+
+        self.controller: None
 
         self.x_axis = None
         self.y_axis = None
@@ -120,11 +124,10 @@ class DAQ_2DViewer_Hamamatsu(DAQ_Viewer_base):
         """
         # Initialize camera class
         self.ini_detector_init(old_controller=controller,
-                               new_controller=DCAM.DCAMCamera(
-                                   idx=self.settings.child('camera_index').value()))
+                               new_controller=self.init_controller())
 
         # Get camera name
-        self.settings.child('camera_name').setValue(self.controller.get_device_info()[1])
+        self.settings.child('camera_info').setValue(self.controller.get_device_info()[1])
 
         # Set exposure time
         self.controller.set_exposure(self.settings.child('timing_opts', 'exposure_time').value() / 1000)
