@@ -1,5 +1,5 @@
 from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D import daq_2Dviewer_GenericPylablibCamera
-from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base, comon_parameters, main
+from pymodaq.control_modules.viewer_utility_classes import main
 
 from pylablib.devices import Thorlabs
 

@@ -4,8 +4,8 @@
 SHORT_PLUGIN_NAME = 'pylablib_camera'  #to be modified, for instance daqmx then rename the module name:
 # (pymodaq_plugins_template become pymodaq_plugins_daqmx for instance)
 
-package-url = 'https://github.com/Attolab/pymodaq_plugins_hamamatsu' #to modify
-description = 'Plugin for Hamamatsu cameras based on DCAM-API'
+package-url = 'https://github.com/Attolab/pymodaq_plugins_pylablib' #to modify
+description = 'Generic pymodaq plugins based on the pylablib library '
 
 author = 'Romain Géneaux'
 author-email = 'romain.geneaux@cea.fr'
