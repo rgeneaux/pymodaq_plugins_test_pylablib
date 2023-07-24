@@ -1,10 +1,10 @@
-from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D import daq_2Dviewer_GenericPylablibCamera
-from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base, comon_parameters, main
+from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D.daq_2Dviewer_GenericPylablibCamera import DAQ_2DViewer_GenericPylablibCamera
+from pymodaq.control_modules.viewer_utility_classes import main
 
 from pylablib.devices import PCO
 
 
-class DAQ_2DViewer_PCOTest(daq_2Dviewer_GenericPylablibCamera):
+class DAQ_2DViewer_PCOTest(DAQ_2DViewer_GenericPylablibCamera):
     """
     """
     def list_cameras(self):
