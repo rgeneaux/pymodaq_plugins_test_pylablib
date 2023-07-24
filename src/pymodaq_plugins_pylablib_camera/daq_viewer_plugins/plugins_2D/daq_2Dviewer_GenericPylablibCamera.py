@@ -1,21 +1,28 @@
-import numpy as np
-from easydict import EasyDict as edict
-from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, DataFromPlugins, Axis
+from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.parameter import Parameter
 from qtpy import QtWidgets, QtCore
 from time import perf_counter
+import numpy as np
 
 
 class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     """
+    IMPORTANT: THIS IS A GENERIC CLASS THAT DOES NOT WORK ON ITS OWN!
+
+    It is meant to be used for cameras supported by the pylablib library, see here:
+    https://pylablib.readthedocs.io/en/latest/devices/cameras_root.html
+
+    The class needs to be subclassed, the subclass only has to define the list_cameras and init_controller methods
+    and the plugin will work.
     """
     params = comon_parameters + [
         {'title': 'Camera:', 'name': 'camera_list', 'type': 'list', 'limits': []},
         {'title': 'Camera model:', 'name': 'camera_info', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Update ROI', 'name': 'update_roi', 'type': 'bool_push', 'value': False},
         {'title': 'Clear ROI+Bin', 'name': 'clear_roi', 'type': 'bool_push', 'value': False},
-        {'title': 'Binning', 'name': 'binning', 'type': 'list', 'values': [1, 2]},
+        {'title': 'Binning', 'name': 'binning', 'type': 'list', 'limits': [1, 2]},
         {'title': 'Image width', 'name': 'hdet', 'type': 'int', 'value': 1, 'readonly': True},
         {'title': 'Image height', 'name': 'vdet', 'type': 'int', 'value': 1, 'readonly': True},
         {'title': 'Timing', 'name': 'timing_opts', 'type': 'group', 'children':
@@ -25,19 +32,21 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
          }
     ]
     callback_signal = QtCore.Signal()
+    roi_pos_size = QtCore.QRectF(0,0,10,10)
+    axes = []
 
     def list_cameras(self):
         self.camera_list = None
-        raise NotImplementedError('.list_cameras() must be defined for this camera class.')
+        raise NotImplementedError('This is a generic camera plugin for which .list_cameras() has not been defined.')
 
     def init_controller(self):
-        raise NotImplementedError('.init_controller() must be defined for this camera class.')
+        raise NotImplementedError('This is a generic camera plugin for which .init_controller() has not been defined.')
 
 
     def ini_attributes(self):
         self.list_cameras()
-        self.params.children('camera_list').setLimits(self.camera_list)
-        self.params.children('camera_list').setValue(self.camera_list[0])
+        self.settings.child('camera_list').setLimits(self.camera_list)
+        self.settings.child('camera_list').setValue(self.camera_list[0])
 
         self.controller: None
 
@@ -48,9 +57,6 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
 
         self.data_shape = 'Data2D'
         self.callback_thread = None
-
-        # Disable "use ROI" option to avoid confusion with other buttons
-        self.settings.child('ROIselect', 'use_ROI').setOpts(visible=False)
 
     def commit_settings(self, param: Parameter):
         """Apply the consequences of a change of value in the detector settings
@@ -72,17 +78,19 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
                 # We handle ROI and binning separately for clarity
                 (old_x, _, old_y, _, xbin, ybin) = self.controller.get_roi()  # Get current binning
 
+                x0 = self.roi_pos_size.x()
+                y0 = self.roi_pos_size.y()
+                width = self.roi_pos_size.width()
+                height = self.roi_pos_size.height()
+
                 # Values need to be rescaled by binning factor and shifted by current x0,y0 to be correct.
-                new_x = (old_x + self.settings.child('ROIselect', 'x0').value()) * xbin
-                new_y = (old_y + self.settings.child('ROIselect', 'y0').value()) * xbin
-                new_width = self.settings.child('ROIselect', 'width').value() * ybin
-                new_height = self.settings.child('ROIselect', 'height').value() * ybin
+                new_x = (old_x + x0) * xbin
+                new_y = (old_y + y0) * xbin
+                new_width = width * ybin
+                new_height = height * ybin
 
                 new_roi = (new_x, new_width, xbin, new_y, new_height, ybin)
                 self.update_rois(new_roi)
-                # recenter rectangle
-                self.settings.child('ROIselect', 'x0').setValue(0)
-                self.settings.child('ROIselect', 'y0').setValue(0)
                 param.setValue(False)
 
         if param.name() == 'binning':
@@ -106,6 +114,9 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
                 new_roi = (0, wdet, 1, 0, hdet, 1)
                 self.update_rois(new_roi)
                 param.setValue(False)
+
+    def ROISelect(self, roi_pos_size):
+        self.roi_pos_size = roi_pos_size
 
     def ini_detector(self, controller=None):
         """Detector communication initialization
@@ -144,7 +155,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
 
         # Way to define a wait function with arguments
         wait_func = lambda: self.controller.wait_for_frame(since='lastread', nframes=1, timeout=20.0)
-        callback = DCAMCallback(wait_func)
+        callback = PylablibCallback(wait_func)
 
         self.callback_thread = QtCore.QThread()  # creation of a Qt5 thread
         callback.moveToThread(self.callback_thread)  # callback object will live within this thread
@@ -177,18 +188,26 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         self.settings.child('vdet').setValue(height)
         mock_data = np.zeros((width, height))
 
+        self.x_axis = Axis(data=np.linspace(0,width,width, endpoint=False), label='Pixels', index = 1)
+
         if width != 1 and height != 1:
             data_shape = 'Data2D'
+            self.y_axis = Axis(data=np.linspace(0, height, height, endpoint=False), label='Pixels', index=0)
+            self.axes = [self.x_axis, self.y_axis]
+
         else:
             data_shape = 'Data1D'
+            self.x_axis = 0
+            self.axes = [self.x_axis]
 
         if data_shape != self.data_shape:
             self.data_shape = data_shape
             # init the viewers
-            self.data_grabed_signal_temp.emit([DataFromPlugins(name='Thorlabs Camera',
+            self.dte_signal_temp.emit(DataToExport('Camera', data = [DataFromPlugins(name='Camera Image',
                                                                data=[np.squeeze(mock_data)],
                                                                dim=self.data_shape,
-                                                               labels=[f'ThorCam_{self.data_shape}'])])
+                                                               labels=[f'Camera_{self.data_shape}'],
+                                                               axes=self.axes)]))
             QtWidgets.QApplication.processEvents()
 
     def update_rois(self, new_roi):
@@ -212,6 +231,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         kwargs: (dict) of others optionals arguments
         """
         try:
+            self._prepare_view()
             # Warning, acquisition_in_progress returns 1,0 and not a real bool
             if not self.controller.acquisition_in_progress():
                 self.controller.clear_acquisition()
@@ -234,11 +254,12 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
             frame = self.controller.read_newest_image()
             # Emit the frame.
             if frame is not None:  # happens for last frame when stopping camera
-                self.data_grabed_signal.emit([DataFromPlugins(name='DCAM Camera',
-                                                              data=[np.squeeze(frame)],
-                                                              dim=self.data_shape,
-                                                              labels=[f'DCAM_{self.data_shape}'])])
-
+                self.dte_signal.emit(DataToExport('Camera', data=[DataFromPlugins(name='Camera Image',
+                                                                                       data=[np.squeeze(frame)],
+                                                                                       dim=self.data_shape,
+                                                                                       labels=[
+                                                                                           f'Camera_{self.data_shape}'],
+                                                                                       axes = self.axes)]))
             if self.settings.child('timing_opts', 'fps_on').value():
                 self.update_fps()
 
@@ -288,7 +309,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         return ''
 
 
-class DCAMCallback(QtCore.QObject):
+class PylablibCallback(QtCore.QObject):
     """Callback object """
     data_sig = QtCore.Signal()
 

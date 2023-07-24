@@ -1,10 +1,10 @@
-from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D import daq_2Dviewer_GenericPylablibCamera
+from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D.daq_2Dviewer_GenericPylablibCamera import DAQ_2DViewer_GenericPylablibCamera
 from pymodaq.control_modules.viewer_utility_classes import main
 
 from pylablib.devices import Thorlabs
 
 
-class DAQ_2DViewer_ThorlabsTest(daq_2Dviewer_GenericPylablibCamera):
+class DAQ_2DViewer_ThorlabsTest(DAQ_2DViewer_GenericPylablibCamera):
     """
     """
     def list_cameras(self):
@@ -22,7 +22,7 @@ class DAQ_2DViewer_ThorlabsTest(daq_2Dviewer_GenericPylablibCamera):
         # Use any argument necessary (serial_number, camera index, etc.) depending on the camera
 
         # Init camera with currently selected serial number in the camera list
-        return Thorlabs.TLCamera(self.params.child("camera_list").value())
+        return Thorlabs.ThorlabsTLCamera(self.settings["camera_list"])
 
 
 
