@@ -14,9 +14,10 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     It is meant to be used for cameras supported by the pylablib library, see here:
     https://pylablib.readthedocs.io/en/latest/devices/cameras_root.html
 
-    The class needs to be subclassed, the subclass only has to define the list_cameras and init_controller methods
+    The class needs to be subclassed, the subclass only has to define the camera_list and init_controller methods
     and the plugin will work.
     """
+
     params = comon_parameters + [
         {'title': 'Camera:', 'name': 'camera_list', 'type': 'list', 'limits': []},
         {'title': 'Camera model:', 'name': 'camera_info', 'type': 'str', 'value': '', 'readonly': True},
@@ -35,19 +36,10 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     roi_pos_size = QtCore.QRectF(0,0,10,10)
     axes = []
 
-    def list_cameras(self):
-        self.camera_list = None
-        raise NotImplementedError('This is a generic camera plugin for which .list_cameras() has not been defined.')
-
     def init_controller(self):
         raise NotImplementedError('This is a generic camera plugin for which .init_controller() has not been defined.')
 
-
     def ini_attributes(self):
-        self.list_cameras()
-        self.settings.child('camera_list').setLimits(self.camera_list)
-        self.settings.child('camera_list').setValue(self.camera_list[0])
-
         self.controller: None
 
         self.x_axis = None
