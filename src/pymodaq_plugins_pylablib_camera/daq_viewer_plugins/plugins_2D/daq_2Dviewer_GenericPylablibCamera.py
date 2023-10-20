@@ -208,7 +208,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     def update_rois(self, new_roi):
         # In pylablib, ROIs compare as tuples
         (new_x, new_width, new_xbinning, new_y, new_height, new_ybinning) = new_roi
-        if new_roi != self.controller.get_roi():☻
+        if new_roi != self.controller.get_roi():
             # self.controller.set_attribute_value("ROIs",[new_roi])
             self.controller.set_roi(hstart=new_x, hend=new_x + new_width, vstart=new_y, vend=new_y + new_height,
                                     hbin=new_xbinning, vbin=new_ybinning)
