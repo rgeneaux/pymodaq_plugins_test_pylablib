@@ -139,8 +139,9 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         self.settings.child('timing_opts', 'fps').setOpts(visible=self.settings.child('timing_opts', 'fps_on').value())
 
         # Update image parameters
-        (*_, hbin, vbin) = self.controller.get_roi()
-        height, width = self.controller._get_data_dimensions_rc()
+        (hstart, hend, vstart, vend, hbin, vbin) = self.controller.get_roi()
+        height = hend-hstart
+        width = vend-vstart
         self.settings.child('binning').setValue(hbin)
         self.settings.child('hdet').setValue(width)
         self.settings.child('vdet').setValue(height)
@@ -174,7 +175,9 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         #
         # sizex = wx // bx
         # sizey = wy // by
-        height, width = self.controller._get_data_dimensions_rc()
+        (hstart, hend, vstart, vend, *_) = self.controller.get_roi()
+        height = hend - hstart
+        width = vend - vstart
 
         self.settings.child('hdet').setValue(width)
         self.settings.child('vdet').setValue(height)
@@ -205,7 +208,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
     def update_rois(self, new_roi):
         # In pylablib, ROIs compare as tuples
         (new_x, new_width, new_xbinning, new_y, new_height, new_ybinning) = new_roi
-        if new_roi != self.controller.get_roi():
+        if new_roi != self.controller.get_roi():☻
             # self.controller.set_attribute_value("ROIs",[new_roi])
             self.controller.set_roi(hstart=new_x, hend=new_x + new_width, vstart=new_y, vend=new_y + new_height,
                                     hbin=new_xbinning, vbin=new_ybinning)
