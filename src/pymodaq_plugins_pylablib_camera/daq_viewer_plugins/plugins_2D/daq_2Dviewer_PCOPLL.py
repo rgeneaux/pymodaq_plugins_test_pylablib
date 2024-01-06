@@ -1,10 +1,10 @@
 from pymodaq_plugins_pylablib_camera.daq_viewer_plugins.plugins_2D.daq_2Dviewer_GenericPylablibCamera import DAQ_2DViewer_GenericPylablibCamera
 from pymodaq.control_modules.viewer_utility_classes import main
 
-from pylablib.devices import Thorlabs
+from pylablib.devices import PCO
 
 
-class DAQ_2DViewer_ThorlabsTest(DAQ_2DViewer_GenericPylablibCamera):
+class DAQ_2DViewer_PCOPLL(DAQ_2DViewer_GenericPylablibCamera):
     """
     """
     # Generate a  **list**  of available cameras.
@@ -13,8 +13,8 @@ class DAQ_2DViewer_ThorlabsTest(DAQ_2DViewer_GenericPylablibCamera):
     # 2) Other classes have a .get_cameras_number(), which returns the number of connected cameras
     #    in this case we can define the list as self.camera_list = [*range(number_of_cameras)]
 
-    # For Thorlabs, this returns a list of serial numbers
-    camera_list = Thorlabs.list_cameras_tlcam()
+    # For PCO, this returns the number of connected cameras
+    camera_list = [*range(PCO.get_cameras_number())]
 
     # Update the params (nothing to change here)
     params = DAQ_2DViewer_GenericPylablibCamera.params
@@ -26,7 +26,7 @@ class DAQ_2DViewer_ThorlabsTest(DAQ_2DViewer_GenericPylablibCamera):
         # Use any argument necessary (serial_number, camera index, etc.) depending on the camera
 
         # Init camera with currently selected serial number in the camera list
-        return Thorlabs.ThorlabsTLCamera(self.settings["camera_list"])
+        return PCO.PCOSC2Camera(idx=self.params.child("camera_list").value())
 
 
 if __name__ == '__main__':

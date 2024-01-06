@@ -183,16 +183,16 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         self.settings.child('vdet').setValue(height)
         mock_data = np.zeros((width, height))
 
-        self.x_axis = Axis(data=np.linspace(0,width,width, endpoint=False), label='Pixels', index = 1)
+        self.x_axis = Axis(data=np.linspace(0,width,width, endpoint=False), label='Pixels', index = 0)
 
         if width != 1 and height != 1:
             data_shape = 'Data2D'
-            self.y_axis = Axis(data=np.linspace(0, height, height, endpoint=False), label='Pixels', index=0)
+            self.y_axis = Axis(data=np.linspace(0, height, height, endpoint=False), label='Pixels', index=1)
             self.axes = [self.x_axis, self.y_axis]
 
         else:
             data_shape = 'Data1D'
-            self.x_axis = 0
+            self.x_axis.index = 0
             self.axes = [self.x_axis]
 
         if data_shape != self.data_shape:
