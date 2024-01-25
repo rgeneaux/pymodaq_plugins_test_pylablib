@@ -33,7 +33,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
          }
     ]
     callback_signal = QtCore.Signal()
-    roi_pos_size = QtCore.QRectF(0,0,10,10)
+    roi_pos_size = QtCore.QRectF(0, 0, 10, 10)
     axes = []
 
     def init_controller(self):
@@ -140,8 +140,8 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
 
         # Update image parameters
         (hstart, hend, vstart, vend, hbin, vbin) = self.controller.get_roi()
-        height = hend-hstart
-        width = vend-vstart
+        height = hend - hstart
+        width = vend - vstart
         self.settings.child('binning').setValue(hbin)
         self.settings.child('hdet').setValue(width)
         self.settings.child('vdet').setValue(height)
@@ -183,7 +183,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         self.settings.child('vdet').setValue(height)
         mock_data = np.zeros((width, height))
 
-        self.x_axis = Axis(data=np.linspace(0,width,width, endpoint=False), label='Pixels', index = 0)
+        self.x_axis = Axis(data=np.linspace(0, width, width, endpoint=False), label='Pixels', index=0)
 
         if width != 1 and height != 1:
             data_shape = 'Data2D'
@@ -198,11 +198,13 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         if data_shape != self.data_shape:
             self.data_shape = data_shape
             # init the viewers
-            self.dte_signal_temp.emit(DataToExport('Camera', data = [DataFromPlugins(name='Camera Image',
-                                                               data=[np.squeeze(mock_data)],
-                                                               dim=self.data_shape,
-                                                               labels=[f'Camera_{self.data_shape}'],
-                                                               axes=self.axes)]))
+            self.dte_signal_temp.emit(
+                DataToExport('Camera',
+                             data=[DataFromPlugins(name='Camera Image',
+                                                   data=[np.squeeze(mock_data)]
+                                                   dim=self.data_shape,
+                                                   labels=[f'Camera_{self.data_shape}'],
+                                                   axes=self.axes)]))
             QtWidgets.QApplication.processEvents()
 
     def update_rois(self, new_roi):
@@ -210,8 +212,12 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
         (new_x, new_width, new_xbinning, new_y, new_height, new_ybinning) = new_roi
         if new_roi != self.controller.get_roi():
             # self.controller.set_attribute_value("ROIs",[new_roi])
-            self.controller.set_roi(hstart=new_x, hend=new_x + new_width, vstart=new_y, vend=new_y + new_height,
-                                    hbin=new_xbinning, vbin=new_ybinning)
+            self.controller.set_roi(hstart=new_x,
+                                    hend=new_x + new_width,
+                                    vstart=new_y,
+                                    vend=new_y + new_height,
+                                    hbin=new_xbinning,
+                                    vbin=new_ybinning)
             self.emit_status(ThreadCommand('Update_Status', [f'Changed ROI: {new_roi}']))
             self.controller.clear_acquisition()
             self.controller.setup_acquisition()
@@ -239,7 +245,7 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
 
     def emit_data(self):
         """
-            Fonction used to emit data obtained by callback.
+            Function used to emit data obtained by callback.
             See Also
             --------
             daq_utils.ThreadCommand
@@ -249,12 +255,13 @@ class DAQ_2DViewer_GenericPylablibCamera(DAQ_Viewer_base):
             frame = self.controller.read_newest_image()
             # Emit the frame.
             if frame is not None:  # happens for last frame when stopping camera
-                self.dte_signal.emit(DataToExport('Camera', data=[DataFromPlugins(name='Camera Image',
-                                                                                       data=[np.squeeze(frame)],
-                                                                                       dim=self.data_shape,
-                                                                                       labels=[
-                                                                                           f'Camera_{self.data_shape}'],
-                                                                                       axes = self.axes)]))
+                self.dte_signal.emit(
+                    DataToExport('Camera',
+                                 data=[DataFromPlugins(name='Camera Image',
+                                                       data=[np.squeeze(frame)],
+                                                       dim=self.data_shape,
+                                                       labels=[f'Camera_{self.data_shape}'],
+                                                       axes=self.axes)]))
             if self.settings.child('timing_opts', 'fps_on').value():
                 self.update_fps()
 
